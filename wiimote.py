@@ -6,7 +6,7 @@ import threading
 
 class WiimoteController:
 	""" Wiimote controller """
-	def __init__(self):
+	def __init__(self, mac):
 		self.buttons = [ # Buttons key codes
 			['1', 2],
 			['2', 1],
@@ -20,16 +20,16 @@ class WiimoteController:
 			['Down', 1024],
 			['Left', 256]
 		]
+		self.mac = mac
 		self.repeater = False
 		self.on_key_down = False
 		self.on_disconnect = False
 		self.wiimote = False
 
 	def connect(self):
-		print 'Put Wiimote in discoverable mode now (press 1+2)...'
 		""" Opens wiimote connection """
 		try:
-			wiimote = self.wiimote = cwiid.Wiimote()
+			wiimote = self.wiimote = cwiid.Wiimote(self.mac)
 			wiimote.mesg_callback = self.callback
 			self.led = 0
 			self.leds = [0, cwiid.LED1_ON, cwiid.LED2_ON, cwiid.LED3_ON, cwiid.LED4_ON]
@@ -38,6 +38,7 @@ class WiimoteController:
 			wiimote.rpt_mode = 0 ^ cwiid.RPT_BTN
 		except:
 			return False
+		return True
 
 	def disconnect(self):
 		""" Closes wiimote connection """

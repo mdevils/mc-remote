@@ -3,10 +3,11 @@ import sys
 import time
 from sendkeys import SendKeys
 from wiimote import WiimoteController
-sys.path.append('devices')
+sys.path.append('/home/mdevils/mc-remote/devices')
 from acer_x1160 import AcerX1160
-
-WIIMOTE_NO_ACTIVITY_TIMEOUT = 600 # Wiimote inactivity timeout. Saves battery energy.
+from defender_hollywood_95 import DefenderHollywood95
+WIIMOTE_NO_ACTIVITY_TIMEOUT = 300 # Wiimote inactivity timeout. Saves battery energy.
+WIIMOTE_MAC	= "00:1F:32:91:2A:F2"
 
 class MediaCenter:
 	""" Main class for controlling devices """
@@ -16,11 +17,11 @@ class MediaCenter:
 		self.MODE_TV	= 2
 		self.mode = self.MODE_OFF
 		self.sendkeys = SendKeys()
-		self.sendkeys.send(self.sendkeys.ENTER)
 
 		self.projector = AcerX1160()
+		self.speakers = DefenderHollywood95()
 
-		self.wiimote = WiimoteController()
+		self.wiimote = WiimoteController(WIIMOTE_MAC)
 		self.wiimote.on_key_down = self.key_down
 		self.wiimote.on_disconnect = self.wiimote_reconnect
 
@@ -34,11 +35,15 @@ class MediaCenter:
 				if keys[1] == 'A':
 					self.mode = self.MODE_XBMC
 					self.projector.power()
+					self.speakers.power()
 				if keys[1] == 'Home':
 					self.mode = self.MODE_OFF
 					self.projector.power()
+					self.speakers.power()
 				if keys[1] == 'B':
 					self.projector.source()
+				if keys[1] == '-':
+					self.speakers.power()
 		else:
 			if len(keys) == 1:
 				if keys[0] == 'Up':
@@ -56,22 +61,26 @@ class MediaCenter:
 				if keys[0] == 'B':
 					self.sendkeys.send(self.sendkeys.ESC)
 				if keys[0] == '+':
-					self.sendkeys.send(self.sendkeys.EQUALS)
+					self.speakers.vol_up()
 				if keys[0] == '-':
-					self.sendkeys.send(self.sendkeys.MINUS)
-				
+					self.speakers.vol_down()
 
 	def wiimote_reconnect(self):
 		""" Reconnects to wiimote """
 		self.wiimote_no_activity_time = 0
 		while not self.wiimote.connect():
-			connecting = True #nothing
+			time.sleep(0.01)
 
 media_center = MediaCenter()
 
 while True:
 	time.sleep(1)
 	media_center.wiimote_no_activity_time += 1
-	if media_center.wiimote_no_activity_time == WIIMOTE_NO_ACTIVITY_TIMEOUT:
+	if media_center.wiimote_no_activity_time >= WIIMOTE_NO_ACTIVITY_TIMEOUT:
+		old_on_disconnect = media_center.wiimote.on_disconnect
+		media_center.wiimote.on_disconnect = False
 		media_center.wiimote.disconnect()
+		media_center.wiimote.on_disconnect = old_on_disconnect
+		time.sleep(5)
+		media_center.wiimote_reconnect()
 	
